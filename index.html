@@ -379,16 +379,38 @@ function prevEp(){
   else{let ps=curShow-1;while(ps>=0&&!library[ps].episodes.length)ps--;
     if(ps>=0)play(ps,library[ps].episodes.length-1);}
 }
-function togglePlay(){ video.paused?doPlay():doPause(); }
-function doPlay(){ video.play().catch(()=>{}); if(!applyingRemote)send({t:'play',time:video.currentTime}); }
-function doPause(){ video.pause(); if(!applyingRemote)send({t:'pause',time:video.currentTime}); }
-function seekTo(s){ video.currentTime=s; if(!applyingRemote)send({t:'seek',time:s}); }
+/* ---- command model ----
+   PLAY/PAUSE: either side may trigger. The command routes to the HOST's real
+     video (the single stream source), so pausing the source pauses it for both
+     with no drift. Guest just sends a request; host's video obeys and the
+     stream reflects it.
+   SEEK: host-only. Host seeking re-flows the live stream from the new spot;
+     we flag the guest to show a brief "syncing" spinner during the rebuffer.  */
+function togglePlay(){
+  if(role==='guest'){
+    const want = video.paused?'play':'pause';
+    send({t:'ctl',cmd:want});               // ask host to drive the real playhead
+    applyingRemote=true;                      // reflect locally right away (snappy); host echo confirms
+    if(want==='play') video.play().catch(()=>{}); else video.pause();
+    applyingRemote=false;
+    return;
+  }
+  video.paused?doPlay():doPause();
+}
+function doPlay(){ video.play().catch(()=>{}); if(!applyingRemote)send({t:'play'}); }
+function doPause(){ video.pause(); if(!applyingRemote)send({t:'pause'}); }
+function seekTo(s){
+  if(role==='guest') return;               // guests cannot seek (no timeline on a live stream)
+  send({t:'buffering'});                    // tell guest to show spinner
+  video.currentTime=s;
+  send({t:'seek'});                          // host position changed; stream will re-flow
+}
 
 $('playBtn').onclick=togglePlay;
 $('nextBtn').onclick=()=>{ if(role==='guest'){send({t:'next'});}else nextEp(); };
 $('prevBtn').onclick=()=>{ if(role==='guest'){send({t:'prev'});}else prevEp(); };
-$('fwd10').onclick=()=>seekTo(Math.min(video.currentTime+10,video.duration||1e9));
-$('back10').onclick=()=>seekTo(Math.max(video.currentTime-10,0));
+$('fwd10').onclick=()=>{ if(role==='guest')return; seekTo(Math.min(video.currentTime+10,video.duration||1e9)); };
+$('back10').onclick=()=>{ if(role==='guest')return; seekTo(Math.max(video.currentTime-10,0)); };
 $('fsBtn').onclick=()=>{const s=document.querySelector('.screen');
   document.fullscreenElement?document.exitFullscreen():s.requestFullscreen();};
 $('vol').oninput=e=>video.volume=e.target.value;
@@ -396,6 +418,8 @@ $('vol').oninput=e=>video.volume=e.target.value;
 video.addEventListener('play',()=>{$('playIcon').classList.add('hidden');$('pauseIcon').classList.remove('hidden');});
 video.addEventListener('pause',()=>{$('pauseIcon').classList.add('hidden');$('playIcon').classList.remove('hidden');});
 video.addEventListener('ended',()=>{ if(role!=='guest') nextEp(); });
+// host: once our own seek settles, nudge the guest to resync + clear its spinner
+video.addEventListener('seeked',()=>{ if(role==='host'){ send({t:'seek'}); send({t: video.paused?'pause':'play'}); } });
 video.addEventListener('loadedmetadata',()=>{$('dur').textContent=fmt(video.duration);$('seek').max=video.duration||100;});
 video.addEventListener('timeupdate',()=>{$('cur').textContent=fmt(video.currentTime);
   if(!seeking)$('seek').value=video.currentTime;});
@@ -413,8 +437,8 @@ document.addEventListener('keydown',e=>{
   else if(k==='p')$('prevBtn').click();
   else if(k==='f')$('fsBtn').click();
   else if(k==='escape')goHome();
-  else if(e.key==='ArrowRight')seekTo(Math.min(video.currentTime+5,video.duration||1e9));
-  else if(e.key==='ArrowLeft')seekTo(Math.max(video.currentTime-5,0));
+  else if(e.key==='ArrowRight'&&role!=='guest')seekTo(Math.min(video.currentTime+5,video.duration||1e9));
+  else if(e.key==='ArrowLeft'&&role!=='guest')seekTo(Math.max(video.currentTime-5,0));
 });
 
 /* ============================================================
@@ -442,7 +466,7 @@ function startHosting(){
         const ep=library[curShow].episodes[curEp];
         send({t:'load',title:library[curShow].name,sub:(ep.label?ep.label+' · ':'')+ep.name});
         pipeStreamToGuest();
-        send({t: video.paused?'pause':'play', time:video.currentTime});
+        send({t: video.paused?'pause':'play'});
       }
     });
     conn.on('data',onHostData);
@@ -458,11 +482,13 @@ function pipeStreamToGuest(){
   mediaCall=peer.call(conn.peer,localStream);
 }
 function onHostData(msg){
+  // messages FROM the guest. Guest may drive play/pause + episode skips only.
   applyingRemote=true;
   switch(msg.t){
-    case 'play': if(Math.abs(video.currentTime-msg.time)>0.6)video.currentTime=msg.time; video.play().catch(()=>{}); break;
-    case 'pause': video.pause(); if(msg.time!=null)video.currentTime=msg.time; break;
-    case 'seek': video.currentTime=msg.time; break;
+    case 'ctl':                              // guest play/pause request -> drive host video
+      if(msg.cmd==='play') video.play().catch(()=>{});
+      else if(msg.cmd==='pause') video.pause();
+      break;
     case 'next': nextEp(); break;
     case 'prev': prevEp(); break;
   }
@@ -497,18 +523,59 @@ function joinSession(code){
   });
 }
 function onGuestData(msg){
+  // messages FROM the host. Guest mirrors host state; cannot seek its own stream.
   switch(msg.t){
-    case 'load': $('npTitle').textContent=msg.title||'Now playing'; $('npSub').textContent=msg.sub||''; showPlayer(); break;
-    case 'play': applyingRemote=true; video.play().catch(()=>{}); applyingRemote=false; break;
+    case 'load':
+      $('npTitle').textContent=msg.title||'Now playing';
+      $('npSub').textContent=msg.sub||'';
+      showPlayer(); hideSpinner(); break;
+    case 'play':  applyingRemote=true; video.play().catch(()=>{}); applyingRemote=false; hideSpinner(); break;
     case 'pause': applyingRemote=true; video.pause(); applyingRemote=false; break;
+    case 'buffering': showSpinner('Syncing…'); break;   // host is seeking; hold
+    case 'seek':
+      // host jumped; the live stream re-flows on its own. Clear spinner once frames resume.
+      waitForResume(); break;
   }
 }
+/* guest spinner overlay for the brief rebuffer after a host seek */
+function showSpinner(text){
+  let s=$('spinner');
+  if(!s){
+    s=document.createElement('div'); s.id='spinner';
+    s.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;gap:14px;'+
+      'align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:5;'+
+      'color:#f0ecff;font-family:var(--body);font-size:14px;letter-spacing:.5px';
+    s.innerHTML='<div style="width:44px;height:44px;border:3px solid rgba(255,92,122,.25);'+
+      'border-top-color:#ff5c7a;border-radius:50%;animation:spin .8s linear infinite"></div>'+
+      '<div id="spinTxt"></div>'+
+      '<style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+    document.querySelector('.screen').appendChild(s);
+  }
+  s.style.display='flex'; $('spinTxt').textContent=text||'Syncing…';
+}
+function hideSpinner(){ const s=$('spinner'); if(s)s.style.display='none'; }
+function waitForResume(){
+  // when the stream starts delivering frames again, drop the spinner
+  let done=false;
+  const clear=()=>{ if(done)return; done=true; hideSpinner();
+    video.removeEventListener('timeupdate',clear); };
+  video.addEventListener('timeupdate',clear);
+  setTimeout(clear,4000);   // safety: never spin forever
+}
 function switchToGuestUI(){
-  $('shows').innerHTML=`<div class="guest-note">You're a <b>guest</b>. The host picks what plays — but your
-    play, pause, and skip buttons work too.<br><br>Volume is yours alone.</div>`;
+  $('shows').innerHTML=`<div class="guest-note">You're a <b>guest</b>.<br><br>
+    You can <b>play, pause</b> and <b>skip episodes</b> — those sync for both of you.<br><br>
+    The <b>host controls the timeline</b> (rewind / fast-forward); when they scrub, your video follows.<br><br>
+    Volume is yours alone.</div>`;
   $('libCount').textContent='guest';
   $('addMore').classList.add('hidden');
   $('pickBtn').classList.add('hidden');
+  // hide time controls the guest can't drive on a live stream
+  $('seek').style.display='none';
+  $('cur').style.display='none';
+  $('dur').style.display='none';
+  $('back10').style.display='none';
+  $('fwd10').style.display='none';
 }
 function onPeerError(err){
   console.error('Peer error:',err);
