@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel Room</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap');
+  :root{
+    --bg:#0d0b14;--panel:#161320;--panel-2:#1e1a2b;--ink:#f0ecff;--ink-dim:#9a92b8;
+    --glow:#ff5c7a;--glow-2:#7c5cff;--amber:#ffb45c;--good:#43e08b;--radius:14px;
+    --marquee:'Bebas Neue',Impact,sans-serif;--body:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(124,92,255,.14), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(255,92,122,.12), transparent 55%),
+      var(--bg);
+    color:var(--ink);font-family:var(--body);display:flex;flex-direction:column;overflow:hidden;
+  }
+  header{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid #2a2540;
+    background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);flex-shrink:0}
+  .brand{display:flex;align-items:center;gap:14px;cursor:pointer;user-select:none;transition:.15s}
+  .brand:hover{opacity:.85}
+  .bulbs{display:flex;gap:7px}
+  .bulb{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);animation:flick 1.6s infinite}
+  .bulb:nth-child(2){animation-delay:.2s;background:var(--glow);box-shadow:0 0 8px var(--glow)}
+  .bulb:nth-child(3){animation-delay:.4s;background:var(--glow-2);box-shadow:0 0 8px var(--glow-2)}
+  @keyframes flick{0%,100%{opacity:1}50%{opacity:.35}}
+  .logo{font-family:var(--marquee);font-size:34px;letter-spacing:2px;line-height:1}
+  .logo span{color:var(--glow)}
+  .tagline{color:var(--ink-dim);font-size:12px;letter-spacing:.5px;margin-left:2px}
+  .spacer{flex:1}
+  .status{font-size:12px;color:var(--ink-dim);display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#444}
+  .dot.on{background:var(--good);box-shadow:0 0 8px var(--good)}
+  .dot.live{background:var(--glow);box-shadow:0 0 8px var(--glow);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  button{font-family:var(--body);cursor:pointer;border:none;color:var(--ink)}
+  .btn{background:var(--panel-2);border:1px solid #2a2540;padding:9px 16px;border-radius:10px;
+    font-size:13px;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+  .btn:hover{border-color:var(--glow-2);transform:translateY(-1px)}
+  .btn.primary{background:linear-gradient(135deg,var(--glow),var(--glow-2));border:none}
+  .btn.primary:hover{filter:brightness(1.1)}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .home-btn{background:var(--panel-2);border:1px solid #2a2540;border-radius:10px;width:40px;height:40px;
+    display:flex;align-items:center;justify-content:center;transition:.15s}
+  .home-btn:hover{border-color:var(--glow-2);color:var(--glow)}
+  .home-btn svg{width:20px;height:20px;fill:currentColor}
+
+  main{flex:1;display:grid;grid-template-columns:290px 1fr;min-height:0}
+  aside{border-right:1px solid #2a2540;background:var(--panel);display:flex;flex-direction:column;min-height:0}
+  .side-head{padding:16px 18px 10px;display:flex;justify-content:space-between;align-items:baseline}
+  .side-head h2{font-family:var(--marquee);font-size:20px;letter-spacing:1.5px;font-weight:400}
+  .side-head .count{font-size:11px;color:var(--ink-dim)}
+  .add-more{margin:0 14px 10px;padding:8px;border:1px dashed #37314f;border-radius:10px;
+    text-align:center;font-size:12px;color:var(--ink-dim);cursor:pointer;transition:.15s}
+  .add-more:hover{border-color:var(--glow-2);color:var(--ink)}
+  .shows{flex:1;overflow-y:auto;padding:4px 10px 14px}
+  .show{border:1px solid #2a2540;border-radius:12px;margin:8px 0;overflow:hidden;background:var(--panel-2);transition:.15s}
+  .show.active{border-color:var(--glow)}
+  .show-title{padding:11px 13px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;cursor:pointer}
+  .show-title .marker{width:6px;height:22px;border-radius:3px;background:linear-gradient(var(--glow),var(--glow-2));flex-shrink:0}
+  .show-title .n{margin-left:auto;font-size:11px;color:var(--ink-dim);font-weight:500}
+  .show-title .chev{transition:.2s;font-size:11px;color:var(--ink-dim)}
+  .show.collapsed .chev{transform:rotate(-90deg)}
+  .show.collapsed .eps{display:none}
+  .eps{border-top:1px solid #2a2540;max-height:260px;overflow-y:auto}
+  .ep{padding:8px 13px 8px 29px;font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:9px;transition:.12s;cursor:pointer}
+  .ep:hover{background:rgba(124,92,255,.1);color:var(--ink)}
+  .ep.playing{color:var(--glow);background:rgba(255,92,122,.08)}
+  .ep .idx{font-family:var(--marquee);font-size:14px;min-width:22px;letter-spacing:1px;opacity:.8}
+  .ep .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .guest-note{padding:20px 18px;color:var(--ink-dim);font-size:13px;line-height:1.7}
+  .guest-note b{color:var(--ink)}
+  .empty-lib{padding:24px 18px;color:var(--ink-dim);font-size:13px;line-height:1.7;text-align:center}
+
+  .stage{display:flex;flex-direction:column;min-height:0;padding:20px 26px}
+  .screen{flex:1;background:#000;border-radius:var(--radius);position:relative;overflow:hidden;border:1px solid #2a2540;
+    box-shadow:0 0 0 1px rgba(255,92,122,.15),0 30px 80px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;min-height:0}
+  video{width:100%;height:100%;object-fit:contain;background:#000;display:none}
+  .placeholder{text-align:center;padding:30px;max-width:480px;overflow-y:auto;max-height:100%}
+  .placeholder .big{font-family:var(--marquee);font-size:52px;letter-spacing:2px;line-height:.95;margin-bottom:14px}
+  .placeholder .big em{color:var(--glow);font-style:normal}
+  .placeholder p{color:var(--ink-dim);font-size:14px;line-height:1.6;margin-bottom:6px}
+  .steps{text-align:left;font-size:13px;color:var(--ink-dim);line-height:1.8;background:var(--panel);
+    border:1px solid #2a2540;border-radius:12px;padding:14px 18px;margin-top:18px}
+  .steps b{color:var(--ink)}
+  .mode-pick{display:flex;gap:12px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+
+  .nowbar{display:flex;align-items:center;gap:14px;padding:14px 4px 6px;flex-shrink:0}
+  .np-title{font-weight:600;font-size:15px}
+  .np-sub{font-size:12px;color:var(--ink-dim)}
+  .controls{display:flex;align-items:center;gap:10px;padding:8px 4px 2px;flex-shrink:0;flex-wrap:wrap}
+  .ctrl{background:var(--panel-2);border:1px solid #2a2540;border-radius:11px;width:46px;height:46px;
+    display:flex;align-items:center;justify-content:center;transition:.15s}
+  .ctrl:hover{border-color:var(--glow-2);color:var(--glow)}
+  .ctrl.play{width:58px;height:58px;background:linear-gradient(135deg,var(--glow),var(--glow-2));border:none}
+  .ctrl.play:hover{filter:brightness(1.1);color:var(--ink)}
+  .ctrl svg{width:20px;height:20px;fill:currentColor}
+  .ctrl.play svg{width:26px;height:26px}
+  .time{font-size:12px;color:var(--ink-dim);font-variant-numeric:tabular-nums;min-width:96px;text-align:center}
+  .seek{flex:1;min-width:120px;height:6px;-webkit-appearance:none;appearance:none;background:#2a2540;border-radius:3px;outline:none;cursor:pointer}
+  .seek::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--glow);box-shadow:0 0 8px var(--glow);cursor:pointer}
+  .seek::-moz-range-thumb{width:15px;height:15px;border:none;border-radius:50%;background:var(--glow);cursor:pointer}
+  .vol{width:90px;height:6px;-webkit-appearance:none;appearance:none;background:#2a2540;border-radius:3px}
+  .vol::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--ink)}
+  .vol::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--ink)}
+  .lbl{font-size:11px;color:var(--ink-dim);letter-spacing:.5px}
+  .hidden{display:none!important}
+
+  .sesh{display:flex;align-items:center;gap:10px}
+  .code-pill{font-family:var(--marquee);font-size:18px;letter-spacing:2px;background:var(--panel-2);
+    border:1px solid var(--glow);border-radius:9px;padding:5px 14px;color:var(--glow)}
+  .overlay{position:fixed;inset:0;background:rgba(6,4,12,.82);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;z-index:50}
+  .modal{background:var(--panel);border:1px solid #2a2540;border-radius:18px;padding:30px 32px;width:min(440px,92vw);
+    box-shadow:0 30px 90px rgba(0,0,0,.6)}
+  .modal h3{font-family:var(--marquee);font-size:28px;letter-spacing:1.5px;font-weight:400;margin-bottom:6px}
+  .modal h3 span{color:var(--glow)}
+  .modal p{color:var(--ink-dim);font-size:13px;line-height:1.6;margin-bottom:18px}
+  .field{display:flex;gap:8px;margin:14px 0}
+  .field input{flex:1;background:var(--bg);border:1px solid #2a2540;border-radius:10px;padding:12px 14px;
+    color:var(--ink);font-size:15px;font-family:var(--marquee);letter-spacing:2px;text-transform:uppercase}
+  .field input:focus{outline:none;border-color:var(--glow-2)}
+  .field input::placeholder{font-family:var(--body);letter-spacing:0;text-transform:none;color:#5a5378}
+  .modal .row{display:flex;gap:10px;margin-top:8px}
+  .modal .row .btn{flex:1;justify-content:center}
+  .warn{font-size:12px;color:var(--amber);background:rgba(255,180,92,.08);border:1px solid rgba(255,180,92,.25);
+    border-radius:10px;padding:10px 12px;margin-top:16px;line-height:1.5}
+  .copy-hint{font-size:11px;color:var(--good);margin-top:6px;min-height:14px}
+
+  ::-webkit-scrollbar{width:10px}
+  ::-webkit-scrollbar-thumb{background:#2a2540;border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:#38314f}
+  @media (max-width:760px){
+    main{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    aside{max-height:38vh}
+    .tagline{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand" id="brand" title="Back to menu">
+    <div class="bulbs"><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div></div>
+    <div>
+      <div class="logo">REEL<span>ROOM</span></div>
+      <div class="tagline">your videos, watched together</div>
+    </div>
+  </div>
+  <button class="home-btn" id="homeBtn" title="Back to menu">
+    <svg viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-4v-6h-4v6H6v-9H3z"/></svg>
+  </button>
+  <div class="spacer"></div>
+  <div class="sesh" id="seshBar"></div>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">no videos loaded</span></div>
+  <button class="btn primary" id="pickBtn">Add videos</button>
+</header>
+
+<main>
+  <aside>
+    <div class="side-head">
+      <h2>Library</h2>
+      <span class="count" id="libCount">empty</span>
+    </div>
+    <div class="add-more hidden" id="addMore">+ Add more videos</div>
+    <div class="shows" id="shows">
+      <div class="empty-lib">No videos yet.<br>Hit <b>Add videos</b> to load some.</div>
+    </div>
+  </aside>
+
+  <section class="stage">
+    <div class="screen">
+      <video id="video" playsinline></video>
+      <div class="placeholder" id="placeholder">
+        <div class="big">WATCH <em>TOGETHER</em></div>
+        <p>Pick videos from your computer. Host from your PC and send a friend a code — you both control playback, and the video streams straight from your machine to theirs.</p>
+        <div class="mode-pick">
+          <button class="btn primary" id="hostBtn">Host a session</button>
+          <button class="btn" id="joinBtn">Join with a code</button>
+        </div>
+        <div class="steps">
+          <b>Hosting:</b> click <b>Add videos</b> and select as many files as you want at once (Ctrl+A in the picker grabs them all). They auto-group into shows by filename — name files like <b>ShowName S01E01</b> and each show sorts itself.<br><br>
+          <b>Joining:</b> just paste the code your friend sends — no files needed on your end.<br><br>
+          <b>Heads up:</b> works great on home Wi-Fi. Some strict office/mobile networks block the direct connection.
+        </div>
+      </div>
+    </div>
+
+    <div class="nowbar" id="nowbar" style="display:none">
+      <div>
+        <div class="np-title" id="npTitle">—</div>
+        <div class="np-sub" id="npSub">—</div>
+      </div>
+      <div class="spacer"></div>
+      <span class="lbl">VOL</span>
+      <input type="range" class="vol" id="vol" min="0" max="1" step="0.01" value="1">
+    </div>
+
+    <div class="controls" id="controls" style="display:none">
+      <button class="ctrl" id="prevBtn" title="Previous episode (P)">
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+      <button class="ctrl" id="back10" title="Back 10s">
+        <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a6 6 0 11-6 6H4a8 8 0 108-8z"/></svg></button>
+      <button class="ctrl play" id="playBtn" title="Play / Pause (Space)">
+        <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
+      <button class="ctrl" id="fwd10" title="Forward 10s">
+        <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7a6 6 0 106 6h2a8 8 0 11-8-8z"/></svg></button>
+      <button class="ctrl" id="nextBtn" title="Next episode (N)">
+        <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zm-2 6L5.5 6v12z"/></svg></button>
+      <span class="time" id="cur">0:00</span>
+      <input type="range" class="seek" id="seek" min="0" max="100" value="0" step="0.1">
+      <span class="time" id="dur">0:00</span>
+      <button class="ctrl" id="fsBtn" title="Fullscreen (F)">
+        <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7zm-2-4h2V7h3V5H5zm12 7h-3v2h5v-5h-2zM14 5v2h3v3h2V5z"/></svg></button>
+    </div>
+  </section>
+</main>
+
+<!-- persistent hidden file input; universal multi-file selection -->
+<input type="file" id="fileInput" accept="video/*,.mkv,.mov" multiple style="display:none">
+
+<script>
+/* ============================================================
+   REEL ROOM v3
+   - Multi-file upload only (no directory picker -> works everywhere)
+   - Auto-grouping into shows by filename
+   - Home navigation (logo + home button)
+   - WebRTC watch-together (1 guest), both control playback
+   ============================================================ */
+const VIDEO_EXT=['mp4','webm','ogg','ogv','m4v','mov','mkv','avi'];
+const $=id=>document.getElementById(id);
+const video=$('video');
+
+let library=[];                // [{name, episodes:[{name,label,file}]}]
+let curShow=-1, curEp=-1, objectUrl=null;
+let role=null;                 // 'host' | 'guest' | null
+let peer=null, conn=null, mediaCall=null, localStream=null;
+let applyingRemote=false, _code='', pendingHost=false;
+
+/* ---------------- FILE INPUT (universal) ---------------- */
+$('pickBtn').addEventListener('click',()=>{ pendingHost=false; $('fileInput').click(); });
+$('hostBtn').addEventListener('click',()=>{ pendingHost=true; $('fileInput').click(); });
+$('joinBtn').addEventListener('click',openJoinModal);
+$('addMore').addEventListener('click',()=>{ pendingHost=false; $('fileInput').click(); });
+$('fileInput').addEventListener('change',e=>{
+  const files=[...e.target.files].filter(f=>isVideo(f.name));
+  e.target.value='';                       // allow re-picking same files later
+  if(!files.length){ if(pendingHost) alert('No video files selected.'); return; }
+  addFiles(files);
+  if(pendingHost){ pendingHost=false; startHosting(); }
+});
+
+/* ---------------- HOME NAVIGATION ---------------- */
+$('brand').addEventListener('click',goHome);
+$('homeBtn').addEventListener('click',goHome);
+function goHome(){
+  // return to the Watch Together menu without dropping the library or session
+  video.pause();
+  $('placeholder').style.display='block';
+  video.style.display='none';
+  $('nowbar').style.display='none';
+  $('controls').style.display='none';
+}
+
+/* ---------------- FILENAME PARSER ---------------- */
+function parseName(raw){
+  let n=raw.replace(/\.[^.]+$/,'').replace(/[._]/g,' ').replace(/\s+/g,' ').trim();
+  let m=n.match(/^(.*?)[\s-]*[Ss](\d{1,2})[\s-]*[Ee](\d{1,3})(.*)$/);
+  if(m) return {show:titleCase(m[1]),season:+m[2],ep:+m[3]};
+  m=n.match(/^(.*?)[\s-]*(\d{1,2})x(\d{1,3})(.*)$/i);
+  if(m) return {show:titleCase(m[1]),season:+m[2],ep:+m[3]};
+  m=n.match(/^(.*?)[\s-]*(?:Episode|Ep|E)[\s-]*(\d{1,3})(.*)$/i);
+  if(m && titleCase(m[1])) return {show:titleCase(m[1]),season:1,ep:+m[2]};
+  m=n.match(/^(.*?\D)[\s-]+(\d{1,3})$/);
+  if(m && titleCase(m[1])) return {show:titleCase(m[1]),season:1,ep:+m[2]};
+  return {show:'Other',season:1,ep:null};
+}
+function titleCase(s){
+  return (s||'').replace(/[._]/g,' ').replace(/[-–—]+$/,'').replace(/^\s*[-–—]+/,'')
+    .replace(/\s+/g,' ').trim().replace(/\b\w/g,c=>c.toUpperCase());
+}
+const isVideo=n=>VIDEO_EXT.includes(n.split('.').pop().toLowerCase());
+const stripExt=n=>n.replace(/\.[^.]+$/,'');
+
+/* ---------------- BUILD / MERGE LIBRARY ---------------- */
+function addFiles(files){
+  files.forEach(file=>{
+    const p=parseName(file.name);
+    const label = p.ep!=null ? (p.season>1?`S${p.season} · E${p.ep}`:`Ep ${p.ep}`) : null;
+    let show=library.find(s=>s.name===p.show);
+    if(!show){ show={name:p.show,episodes:[]}; library.push(show); }
+    // avoid dupes by filename
+    if(show.episodes.some(e=>e.file.name===file.name && e.file.size===file.size)) return;
+    show.episodes.push({ name:stripExt(file.name), label, season:p.season, ep:p.ep, file });
+  });
+  // sort episodes within each show, then shows alphabetically (Other last)
+  library.forEach(s=>s.episodes.sort((a,b)=>{
+    if(a.ep!=null && b.ep!=null) return (a.season-b.season)||(a.ep-b.ep);
+    return a.name.localeCompare(b.name,undefined,{numeric:true});
+  }));
+  library.sort((a,b)=>{
+    if(a.name==='Other')return 1; if(b.name==='Other')return -1;
+    return a.name.localeCompare(b.name);
+  });
+  finishLoad();
+}
+function finishLoad(){
+  const total=library.reduce((n,s)=>n+s.episodes.length,0);
+  if(!total){ return; }
+  $('statusText').textContent=`${total} video${total>1?'s':''} ready`;
+  if(!$('dot').classList.contains('live')) $('dot').className='dot on';
+  $('libCount').textContent=`${library.length} show${library.length>1?'s':''}`;
+  $('addMore').classList.remove('hidden');
+  renderShows();
+}
+function renderShows(){
+  const box=$('shows');box.innerHTML='';
+  if(!library.length){ box.innerHTML='<div class="empty-lib">No videos yet.<br>Hit <b>Add videos</b> to load some.</div>'; return; }
+  library.forEach((show,si)=>{
+    const el=document.createElement('div');
+    el.className='show'+(si===curShow?' active':'');
+    const head=document.createElement('div');head.className='show-title';
+    head.innerHTML=`<span class="marker"></span>${esc(show.name)}
+      <span class="n">${show.episodes.length} ep</span><span class="chev">▼</span>`;
+    head.onclick=(ev)=>{ if(ev.target.closest('.chev')||true){ el.classList.toggle('collapsed'); } };
+    const wrap=document.createElement('div');wrap.className='eps';
+    show.episodes.forEach((ep,ei)=>{
+      const row=document.createElement('div');
+      row.className='ep'+(si===curShow&&ei===curEp?' playing':'');
+      const idx=ep.ep!=null?String(ep.ep).padStart(2,'0'):String(ei+1).padStart(2,'0');
+      row.innerHTML=`<span class="idx">${idx}</span><span class="nm">${esc(ep.label?ep.name:ep.name)}</span>`;
+      row.onclick=(e)=>{ e.stopPropagation(); play(si,ei); };
+      wrap.appendChild(row);
+    });
+    el.appendChild(head);el.appendChild(wrap);box.appendChild(el);
+  });
+}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------------- PLAYBACK (host) ---------------- */
+async function play(si,ei){
+  const ep=library[si]?.episodes[ei];if(!ep)return;
+  curShow=si;curEp=ei;
+  if(objectUrl)URL.revokeObjectURL(objectUrl);
+  objectUrl=URL.createObjectURL(ep.file);
+  video.srcObject=null;
+  video.src=objectUrl;
+  await video.play().catch(()=>{});
+  showPlayer();
+  $('npTitle').textContent=library[si].name;
+  $('npSub').textContent=(ep.label?ep.label+' · ':'')+ep.name;
+  renderShows();
+  if(role==='host'){
+    pipeStreamToGuest();
+    send({t:'load',title:library[si].name,sub:(ep.label?ep.label+' · ':'')+ep.name});
+  }
+}
+function showPlayer(){
+  $('placeholder').style.display='none';video.style.display='block';
+  $('nowbar').style.display='flex';$('controls').style.display='flex';
+}
+function nextEp(){
+  if(curShow<0)return;const eps=library[curShow].episodes;
+  if(curEp+1<eps.length)play(curShow,curEp+1);
+  else{let ns=curShow+1;while(ns<library.length&&!library[ns].episodes.length)ns++;
+    if(ns<library.length)play(ns,0);}
+}
+function prevEp(){
+  if(curShow<0)return;
+  if(video.currentTime>3){seekTo(0);return;}
+  if(curEp-1>=0)play(curShow,curEp-1);
+  else{let ps=curShow-1;while(ps>=0&&!library[ps].episodes.length)ps--;
+    if(ps>=0)play(ps,library[ps].episodes.length-1);}
+}
+function togglePlay(){ video.paused?doPlay():doPause(); }
+function doPlay(){ video.play().catch(()=>{}); if(!applyingRemote)send({t:'play',time:video.currentTime}); }
+function doPause(){ video.pause(); if(!applyingRemote)send({t:'pause',time:video.currentTime}); }
+function seekTo(s){ video.currentTime=s; if(!applyingRemote)send({t:'seek',time:s}); }
+
+$('playBtn').onclick=togglePlay;
+$('nextBtn').onclick=()=>{ if(role==='guest'){send({t:'next'});}else nextEp(); };
+$('prevBtn').onclick=()=>{ if(role==='guest'){send({t:'prev'});}else prevEp(); };
+$('fwd10').onclick=()=>seekTo(Math.min(video.currentTime+10,video.duration||1e9));
+$('back10').onclick=()=>seekTo(Math.max(video.currentTime-10,0));
+$('fsBtn').onclick=()=>{const s=document.querySelector('.screen');
+  document.fullscreenElement?document.exitFullscreen():s.requestFullscreen();};
+$('vol').oninput=e=>video.volume=e.target.value;
+
+video.addEventListener('play',()=>{$('playIcon').classList.add('hidden');$('pauseIcon').classList.remove('hidden');});
+video.addEventListener('pause',()=>{$('pauseIcon').classList.add('hidden');$('playIcon').classList.remove('hidden');});
+video.addEventListener('ended',()=>{ if(role!=='guest') nextEp(); });
+video.addEventListener('loadedmetadata',()=>{$('dur').textContent=fmt(video.duration);$('seek').max=video.duration||100;});
+video.addEventListener('timeupdate',()=>{$('cur').textContent=fmt(video.currentTime);
+  if(!seeking)$('seek').value=video.currentTime;});
+let seeking=false;
+$('seek').addEventListener('input',()=>{seeking=true;$('cur').textContent=fmt($('seek').value);});
+$('seek').addEventListener('change',()=>{seekTo(parseFloat($('seek').value));seeking=false;});
+const fmt=s=>{if(isNaN(s)||!isFinite(s))return'0:00';s=Math.floor(s);
+  const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0');};
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(e.target.tagName))return;
+  const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();togglePlay();}
+  else if(k==='n')$('nextBtn').click();
+  else if(k==='p')$('prevBtn').click();
+  else if(k==='f')$('fsBtn').click();
+  else if(k==='escape')goHome();
+  else if(e.key==='ArrowRight')seekTo(Math.min(video.currentTime+5,video.duration||1e9));
+  else if(e.key==='ArrowLeft')seekTo(Math.max(video.currentTime-5,0));
+});
+
+/* ============================================================
+   WEBRTC — PeerJS
+   ============================================================ */
+const CODE_CHARS='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const genCode=()=>Array.from({length:5},()=>CODE_CHARS[Math.random()*CODE_CHARS.length|0]).join('');
+const PREFIX='reelroom-';
+const currentCode=()=>_code;
+function send(msg){ if(conn&&conn.open){ try{conn.send(msg);}catch(e){} } }
+
+function startHosting(){
+  if(peer && role==='host'){ return; }   // already hosting
+  role='host';
+  const code=genCode();
+  peer=new Peer(PREFIX+code,{debug:1});
+  renderSeshBar('host',code,'starting…');
+  peer.on('open',()=>{ renderSeshBar('host',code,'waiting for guest'); });
+  peer.on('connection',c=>{
+    conn=c;
+    conn.on('open',()=>{
+      renderSeshBar('host',code,'guest connected');
+      $('dot').className='dot live';$('statusText').textContent='live · 1 guest';
+      if(curShow>=0){
+        const ep=library[curShow].episodes[curEp];
+        send({t:'load',title:library[curShow].name,sub:(ep.label?ep.label+' · ':'')+ep.name});
+        pipeStreamToGuest();
+        send({t: video.paused?'pause':'play', time:video.currentTime});
+      }
+    });
+    conn.on('data',onHostData);
+    conn.on('close',guestGone);
+  });
+  peer.on('error',onPeerError);
+}
+function pipeStreamToGuest(){
+  if(role!=='host'||!conn||!peer)return;
+  try{ localStream=video.captureStream?video.captureStream():video.mozCaptureStream(); }
+  catch(e){ console.warn('captureStream failed',e); return; }
+  if(mediaCall){ try{mediaCall.close();}catch(e){} }
+  mediaCall=peer.call(conn.peer,localStream);
+}
+function onHostData(msg){
+  applyingRemote=true;
+  switch(msg.t){
+    case 'play': if(Math.abs(video.currentTime-msg.time)>0.6)video.currentTime=msg.time; video.play().catch(()=>{}); break;
+    case 'pause': video.pause(); if(msg.time!=null)video.currentTime=msg.time; break;
+    case 'seek': video.currentTime=msg.time; break;
+    case 'next': nextEp(); break;
+    case 'prev': prevEp(); break;
+  }
+  applyingRemote=false;
+}
+function guestGone(){
+  renderSeshBar('host',currentCode(),'guest left');
+  $('dot').className='dot on';$('statusText').textContent='hosting · waiting';
+}
+function joinSession(code){
+  role='guest';
+  peer=new Peer(undefined,{debug:1});
+  peer.on('open',()=>{
+    conn=peer.connect(PREFIX+code,{reliable:true});
+    conn.on('open',()=>{
+      closeModal();
+      renderSeshBar('guest',code,'connected');
+      $('dot').className='dot live';$('statusText').textContent='watching · connected';
+      switchToGuestUI();
+    });
+    conn.on('data',onGuestData);
+    conn.on('close',()=>{ $('dot').className='dot';$('statusText').textContent='host disconnected'; });
+    setTimeout(()=>{ if(!conn||!conn.open) modalError('Could not reach that session. Check the code, or the host may be behind a strict network.'); },9000);
+  });
+  peer.on('call',call=>{
+    call.answer();
+    call.on('stream',remote=>{ video.src=''; video.srcObject=remote; video.play().catch(()=>{}); showPlayer(); });
+  });
+  peer.on('error',err=>{
+    if(err.type==='peer-unavailable') modalError('No session with that code is running right now.');
+    else onPeerError(err);
+  });
+}
+function onGuestData(msg){
+  switch(msg.t){
+    case 'load': $('npTitle').textContent=msg.title||'Now playing'; $('npSub').textContent=msg.sub||''; showPlayer(); break;
+    case 'play': applyingRemote=true; video.play().catch(()=>{}); applyingRemote=false; break;
+    case 'pause': applyingRemote=true; video.pause(); applyingRemote=false; break;
+  }
+}
+function switchToGuestUI(){
+  $('shows').innerHTML=`<div class="guest-note">You're a <b>guest</b>. The host picks what plays — but your
+    play, pause, and skip buttons work too.<br><br>Volume is yours alone.</div>`;
+  $('libCount').textContent='guest';
+  $('addMore').classList.add('hidden');
+  $('pickBtn').classList.add('hidden');
+}
+function onPeerError(err){
+  console.error('Peer error:',err);
+  if(err.type==='unavailable-id'){ if(role==='host'){ try{peer.destroy();}catch(e){} peer=null; startHosting(); return; } }
+  const t=(err.type==='network'||err.type==='server-error')
+    ?'Signaling server unreachable. Try again in a moment.':'Connection problem: '+err.type;
+  if(document.querySelector('.overlay')) modalError(t); else renderSeshBar(role,currentCode(),t);
+}
+function endSession(){
+  try{mediaCall&&mediaCall.close();}catch(e){}
+  try{conn&&conn.close();}catch(e){}
+  try{peer&&peer.destroy();}catch(e){}
+  peer=conn=mediaCall=localStream=null;role=null;
+  $('seshBar').innerHTML='';
+  $('dot').className=library.length?'dot on':'dot';
+  $('statusText').textContent=library.length?'session ended':'no videos loaded';
+  $('pickBtn').classList.remove('hidden');
+  if(library.length){ $('addMore').classList.remove('hidden'); renderShows(); }
+}
+function renderSeshBar(r,code,state){
+  _code=code||_code;
+  const bar=$('seshBar');
+  if(r==='host'){
+    bar.innerHTML=`<span class="lbl">CODE</span>
+      <span class="code-pill" id="codePill">${code}</span>
+      <button class="btn ghost" id="copyBtn" title="Copy code">Copy</button>
+      <span class="lbl" id="seshState">${state||''}</span>
+      <button class="btn ghost" id="endBtn">End</button>`;
+    $('copyBtn').onclick=()=>{navigator.clipboard.writeText(code);
+      $('copyBtn').textContent='Copied!';setTimeout(()=>$('copyBtn').textContent='Copy',1200);};
+  }else{
+    bar.innerHTML=`<span class="lbl">GUEST · ${code}</span>
+      <span class="lbl" id="seshState">${state||''}</span>
+      <button class="btn ghost" id="endBtn">Leave</button>`;
+  }
+  $('endBtn').onclick=endSession;
+}
+function openJoinModal(){
+  const o=document.createElement('div');o.className='overlay';
+  o.innerHTML=`<div class="modal">
+    <h3>JOIN A <span>SESSION</span></h3>
+    <p>Paste the 5-character code your host sent you. You don't need any video files — the stream comes from them.</p>
+    <div class="field"><input id="codeInput" maxlength="5" placeholder="e.g. K4M7Q" autocomplete="off"></div>
+    <div class="copy-hint" id="joinErr"></div>
+    <div class="row">
+      <button class="btn ghost" id="cancelJoin">Cancel</button>
+      <button class="btn primary" id="goJoin">Connect</button>
+    </div>
+    <div class="warn">If it won't connect, you and the host are probably on networks that block direct links. Home Wi-Fi almost always works.</div>
+  </div>`;
+  document.body.appendChild(o);
+  const inp=$('codeInput');inp.focus();
+  inp.addEventListener('input',()=>inp.value=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,''));
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')$('goJoin').click();});
+  $('cancelJoin').onclick=closeModal;
+  $('goJoin').onclick=()=>{
+    const code=inp.value.trim();
+    if(code.length<5){modalError('Codes are 5 characters.');return;}
+    $('goJoin').disabled=true;$('goJoin').textContent='Connecting…';
+    joinSession(code);
+  };
+}
+function modalError(t){ const e=$('joinErr'); if(e){e.style.color='var(--glow)';e.textContent=t;}
+  const g=$('goJoin'); if(g){g.disabled=false;g.textContent='Connect';} }
+function closeModal(){ const o=document.querySelector('.overlay'); if(o)o.remove(); }
+</script>
+</body>
+</html>
