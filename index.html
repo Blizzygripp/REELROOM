@@ -107,6 +107,9 @@
   .seek{flex:1;min-width:120px;height:6px;-webkit-appearance:none;appearance:none;background:#2a2540;border-radius:3px;outline:none;cursor:pointer}
   .seek::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--glow);box-shadow:0 0 8px var(--glow);cursor:pointer}
   .seek::-moz-range-thumb{width:15px;height:15px;border:none;border-radius:50%;background:var(--glow);cursor:pointer}
+  .seek:disabled{cursor:default;opacity:.75}
+  .seek:disabled::-webkit-slider-thumb{cursor:default;background:var(--ink-dim);box-shadow:none}
+  .seek:disabled::-moz-range-thumb{cursor:default;background:var(--ink-dim)}
   .vol{width:90px;height:6px;-webkit-appearance:none;appearance:none;background:#2a2540;border-radius:3px}
   .vol::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--ink)}
   .vol::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--ink)}
@@ -421,8 +424,12 @@ video.addEventListener('ended',()=>{ if(role!=='guest') nextEp(); });
 // host: once our own seek settles, nudge the guest to resync + clear its spinner
 video.addEventListener('seeked',()=>{ if(role==='host'){ send({t:'seek'}); send({t: video.paused?'pause':'play'}); } });
 video.addEventListener('loadedmetadata',()=>{$('dur').textContent=fmt(video.duration);$('seek').max=video.duration||100;});
-video.addEventListener('timeupdate',()=>{$('cur').textContent=fmt(video.currentTime);
-  if(!seeking)$('seek').value=video.currentTime;});
+video.addEventListener('timeupdate',()=>{
+  $('cur').textContent=fmt(video.currentTime);
+  if(!seeking)$('seek').value=video.currentTime;
+  // host streams its clock to the guest (guest's own stream has no timeline)
+  if(role==='host') send({t:'time',cur:video.currentTime,dur:video.duration});
+});
 let seeking=false;
 $('seek').addEventListener('input',()=>{seeking=true;$('cur').textContent=fmt($('seek').value);});
 $('seek').addEventListener('change',()=>{seekTo(parseFloat($('seek').value));seeking=false;});
@@ -535,6 +542,12 @@ function onGuestData(msg){
     case 'seek':
       // host jumped; the live stream re-flows on its own. Clear spinner once frames resume.
       waitForResume(); break;
+    case 'time':
+      // host's clock -> render read-only for the guest
+      $('cur').textContent=fmt(msg.cur);
+      if(isFinite(msg.dur)){ $('dur').textContent=fmt(msg.dur);
+        $('seek').max=msg.dur; $('seek').value=msg.cur; }
+      break;
   }
 }
 /* guest spinner overlay for the brief rebuffer after a host seek */
@@ -565,16 +578,14 @@ function waitForResume(){
 function switchToGuestUI(){
   $('shows').innerHTML=`<div class="guest-note">You're a <b>guest</b>.<br><br>
     You can <b>play, pause</b> and <b>skip episodes</b> — those sync for both of you.<br><br>
-    The <b>host controls the timeline</b> (rewind / fast-forward); when they scrub, your video follows.<br><br>
+    The <b>host controls the timeline</b> (rewind / fast-forward). You'll see the time move, but only the host can scrub it.<br><br>
     Volume is yours alone.</div>`;
   $('libCount').textContent='guest';
   $('addMore').classList.add('hidden');
   $('pickBtn').classList.add('hidden');
-  // hide time controls the guest can't drive on a live stream
-  $('seek').style.display='none';
-  $('cur').style.display='none';
-  $('dur').style.display='none';
-  $('back10').style.display='none';
+  // guest SEES the time + progress, but can't drive it
+  $('seek').disabled=true;              // read-only progress bar (mirrors host)
+  $('back10').style.display='none';     // host-only controls
   $('fwd10').style.display='none';
 }
 function onPeerError(err){
