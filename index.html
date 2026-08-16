@@ -111,6 +111,10 @@
   .stage{display:flex;flex-direction:column;min-height:0;padding:20px 26px}
   .screen{flex:1;background:#000;border-radius:var(--radius);position:relative;overflow:hidden;border:1px solid #2a2540;
     box-shadow:0 0 0 1px rgba(255,92,122,.15),0 30px 80px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;min-height:0}
+  /* in fullscreen the frame/rounding must vanish or it shows a 1px outline around the video */
+  .screen:fullscreen{border:none;border-radius:0;box-shadow:none;background:#000}
+  .screen:-webkit-full-screen{border:none;border-radius:0;box-shadow:none;background:#000}
+  .screen:fullscreen video,.screen:-webkit-full-screen video{border-radius:0}
   video{width:100%;height:100%;object-fit:contain;background:#000;display:none}
   .placeholder{text-align:center;padding:30px;max-width:480px;overflow-y:auto;max-height:100%}
   .placeholder .big{font-family:var(--marquee);font-size:52px;letter-spacing:2px;line-height:.95;margin-bottom:14px}
@@ -312,7 +316,7 @@
   </section>
 </main>
 
-<input type="file" id="fileInput" accept="video/*,.mkv,.mov" multiple style="display:none">
+<input type="file" id="fileInput" accept="video/*" multiple style="display:none">
 
 <script>
 /* ============================================================
@@ -344,8 +348,14 @@ $('fileInput').addEventListener('change',e=>{
   const files=[...e.target.files].filter(f=>isVideo(f.name));
   e.target.value='';
   if(!files.length){ if(pendingHost) alert('No video files selected.'); pendingHost=false; return; }
-  addFiles(files);
-  if(pendingHost){ pendingHost=false; startHosting(); }
+  // instant feedback: on a big batch the tap can otherwise feel frozen on mobile
+  $('statusText').textContent=`Adding ${files.length} video${files.length>1?'s':''}…`;
+  $('libCount').textContent='…';
+  // yield one frame so the label paints before we do the (light) work
+  requestAnimationFrame(()=>{
+    addFiles(files);
+    if(pendingHost){ pendingHost=false; startHosting(); }
+  });
 });
 
 /* ---------------- MOBILE DRAWER ---------------- */
