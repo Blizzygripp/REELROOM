@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Reel Room</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
@@ -20,8 +20,9 @@
       radial-gradient(900px 500px at 0% 110%, rgba(255,92,122,.12), transparent 55%),
       var(--bg);
     color:var(--ink);font-family:var(--body);display:flex;flex-direction:column;overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
   }
-  header{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid #2a2540;
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid #2a2540;
     background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);flex-shrink:0}
   .brand{display:flex;align-items:center;gap:14px;cursor:pointer;user-select:none;transition:.15s}
   .brand:hover{opacity:.85}
@@ -41,18 +42,19 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   button{font-family:var(--body);cursor:pointer;border:none;color:var(--ink)}
   .btn{background:var(--panel-2);border:1px solid #2a2540;padding:9px 16px;border-radius:10px;
-    font-size:13px;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+    font-size:13px;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
   .btn:hover{border-color:var(--glow-2);transform:translateY(-1px)}
   .btn.primary{background:linear-gradient(135deg,var(--glow),var(--glow-2));border:none}
   .btn.primary:hover{filter:brightness(1.1)}
   .btn.ghost{background:transparent}
   .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
-  .home-btn{background:var(--panel-2);border:1px solid #2a2540;border-radius:10px;width:40px;height:40px;
-    display:flex;align-items:center;justify-content:center;transition:.15s}
-  .home-btn:hover{border-color:var(--glow-2);color:var(--glow)}
-  .home-btn svg{width:20px;height:20px;fill:currentColor}
+  .icon-btn{background:var(--panel-2);border:1px solid #2a2540;border-radius:10px;width:40px;height:40px;
+    display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0}
+  .icon-btn:hover{border-color:var(--glow-2);color:var(--glow)}
+  .icon-btn svg{width:20px;height:20px;fill:currentColor}
+  #menuBtn{display:none}   /* hamburger, mobile only */
 
-  main{flex:1;display:grid;grid-template-columns:290px 1fr;min-height:0}
+  main{flex:1;display:grid;grid-template-columns:290px 1fr;min-height:0;position:relative}
   aside{border-right:1px solid #2a2540;background:var(--panel);display:flex;flex-direction:column;min-height:0}
   .side-head{padding:16px 18px 10px;display:flex;justify-content:space-between;align-items:baseline}
   .side-head h2{font-family:var(--marquee);font-size:20px;letter-spacing:1.5px;font-weight:400}
@@ -60,7 +62,7 @@
   .add-more{margin:0 14px 10px;padding:8px;border:1px dashed #37314f;border-radius:10px;
     text-align:center;font-size:12px;color:var(--ink-dim);cursor:pointer;transition:.15s}
   .add-more:hover{border-color:var(--glow-2);color:var(--ink)}
-  .shows{flex:1;overflow-y:auto;padding:4px 10px 14px}
+  .shows{flex:1;overflow-y:auto;padding:4px 10px 14px;min-height:60px}
   .show{border:1px solid #2a2540;border-radius:12px;margin:8px 0;overflow:hidden;background:var(--panel-2);transition:.15s}
   .show.active{border-color:var(--glow)}
   .show-title{padding:11px 13px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;cursor:pointer}
@@ -70,7 +72,7 @@
   .show.collapsed .chev{transform:rotate(-90deg)}
   .show.collapsed .eps{display:none}
   .eps{border-top:1px solid #2a2540;max-height:260px;overflow-y:auto}
-  .ep{padding:8px 13px 8px 29px;font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:9px;transition:.12s;cursor:pointer}
+  .ep{padding:10px 13px 10px 29px;font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:9px;transition:.12s;cursor:pointer}
   .ep:hover{background:rgba(124,92,255,.1);color:var(--ink)}
   .ep.playing{color:var(--glow);background:rgba(255,92,122,.08)}
   .ep .idx{font-family:var(--marquee);font-size:14px;min-width:22px;letter-spacing:1px;opacity:.8}
@@ -78,6 +80,33 @@
   .guest-note{padding:20px 18px;color:var(--ink-dim);font-size:13px;line-height:1.7}
   .guest-note b{color:var(--ink)}
   .empty-lib{padding:24px 18px;color:var(--ink-dim);font-size:13px;line-height:1.7;text-align:center}
+
+  /* ---- CHAT ---- */
+  .chat{border-top:1px solid #2a2540;display:flex;flex-direction:column;flex-shrink:0;height:0;overflow:hidden;
+    transition:height .25s ease}
+  .chat.open{height:min(46%,340px)}
+  .chat-head{padding:10px 16px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;
+    background:rgba(255,255,255,.02)}
+  .chat-head .ct{font-family:var(--marquee);letter-spacing:1.5px;font-size:16px;font-weight:400}
+  .chat-head .unread{background:var(--glow);color:#fff;font-size:10px;font-weight:700;border-radius:9px;
+    padding:1px 7px;margin-left:2px;display:none}
+  .chat-head .unread.show{display:inline-block}
+  .chat-head .toggle{margin-left:auto;font-size:11px;color:var(--ink-dim);transition:.2s}
+  .chat.open .chat-head .toggle{transform:rotate(180deg)}
+  .chat-log{flex:1;overflow-y:auto;padding:8px 14px;display:flex;flex-direction:column;gap:7px}
+  .msg{font-size:13px;line-height:1.35;max-width:88%;padding:6px 10px;border-radius:11px;word-wrap:break-word}
+  .msg .who{font-size:10px;color:var(--ink-dim);letter-spacing:.4px;margin-bottom:1px;font-weight:600}
+  .msg.them{align-self:flex-start;background:var(--panel-2);border:1px solid #2a2540;border-bottom-left-radius:3px}
+  .msg.me{align-self:flex-end;background:linear-gradient(135deg,rgba(255,92,122,.9),rgba(124,92,255,.85));border-bottom-right-radius:3px}
+  .msg.sys{align-self:center;background:transparent;color:var(--ink-dim);font-size:11px;font-style:italic;padding:2px}
+  .chat-input{display:flex;gap:7px;padding:9px 12px;border-top:1px solid #2a2540}
+  .chat-input input{flex:1;background:var(--bg);border:1px solid #2a2540;border-radius:9px;padding:9px 12px;
+    color:var(--ink);font-size:14px;font-family:var(--body)}
+  .chat-input input:focus{outline:none;border-color:var(--glow-2)}
+  .chat-input .send{background:linear-gradient(135deg,var(--glow),var(--glow-2));border:none;border-radius:9px;
+    width:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .chat-input .send svg{width:18px;height:18px;fill:#fff}
+  .chat-input .send:disabled{opacity:.4}
 
   .stage{display:flex;flex-direction:column;min-height:0;padding:20px 26px}
   .screen{flex:1;background:#000;border-radius:var(--radius);position:relative;overflow:hidden;border:1px solid #2a2540;
@@ -97,14 +126,14 @@
   .np-sub{font-size:12px;color:var(--ink-dim)}
   .controls{display:flex;align-items:center;gap:10px;padding:8px 4px 2px;flex-shrink:0;flex-wrap:wrap}
   .ctrl{background:var(--panel-2);border:1px solid #2a2540;border-radius:11px;width:46px;height:46px;
-    display:flex;align-items:center;justify-content:center;transition:.15s}
+    display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0}
   .ctrl:hover{border-color:var(--glow-2);color:var(--glow)}
   .ctrl.play{width:58px;height:58px;background:linear-gradient(135deg,var(--glow),var(--glow-2));border:none}
   .ctrl.play:hover{filter:brightness(1.1);color:var(--ink)}
   .ctrl svg{width:20px;height:20px;fill:currentColor}
   .ctrl.play svg{width:26px;height:26px}
-  .time{font-size:12px;color:var(--ink-dim);font-variant-numeric:tabular-nums;min-width:96px;text-align:center}
-  .seek{flex:1;min-width:120px;height:6px;-webkit-appearance:none;appearance:none;background:#2a2540;border-radius:3px;outline:none;cursor:pointer}
+  .time{font-size:12px;color:var(--ink-dim);font-variant-numeric:tabular-nums;min-width:52px;text-align:center}
+  .seek{flex:1;min-width:80px;height:6px;-webkit-appearance:none;appearance:none;background:#2a2540;border-radius:3px;outline:none;cursor:pointer}
   .seek::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--glow);box-shadow:0 0 8px var(--glow);cursor:pointer}
   .seek::-moz-range-thumb{width:15px;height:15px;border:none;border-radius:50%;background:var(--glow);cursor:pointer}
   .seek:disabled{cursor:default;opacity:.75}
@@ -120,35 +149,74 @@
   .code-pill{font-family:var(--marquee);font-size:18px;letter-spacing:2px;background:var(--panel-2);
     border:1px solid var(--glow);border-radius:9px;padding:5px 14px;color:var(--glow)}
   .overlay{position:fixed;inset:0;background:rgba(6,4,12,.82);backdrop-filter:blur(4px);
-    display:flex;align-items:center;justify-content:center;z-index:50}
-  .modal{background:var(--panel);border:1px solid #2a2540;border-radius:18px;padding:30px 32px;width:min(440px,92vw);
-    box-shadow:0 30px 90px rgba(0,0,0,.6)}
+    display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal{background:var(--panel);border:1px solid #2a2540;border-radius:18px;padding:30px 32px;width:min(440px,100%);
+    box-shadow:0 30px 90px rgba(0,0,0,.6);max-height:90vh;overflow-y:auto}
   .modal h3{font-family:var(--marquee);font-size:28px;letter-spacing:1.5px;font-weight:400;margin-bottom:6px}
   .modal h3 span{color:var(--glow)}
   .modal p{color:var(--ink-dim);font-size:13px;line-height:1.6;margin-bottom:18px}
   .field{display:flex;gap:8px;margin:14px 0}
   .field input{flex:1;background:var(--bg);border:1px solid #2a2540;border-radius:10px;padding:12px 14px;
-    color:var(--ink);font-size:15px;font-family:var(--marquee);letter-spacing:2px;text-transform:uppercase}
+    color:var(--ink);font-size:16px}
   .field input:focus{outline:none;border-color:var(--glow-2)}
-  .field input::placeholder{font-family:var(--body);letter-spacing:0;text-transform:none;color:#5a5378}
+  .field input::placeholder{color:#5a5378}
+  .field.code input{font-family:var(--marquee);letter-spacing:2px;text-transform:uppercase}
+  .field.code input::placeholder{font-family:var(--body);letter-spacing:0;text-transform:none}
   .modal .row{display:flex;gap:10px;margin-top:8px}
-  .modal .row .btn{flex:1;justify-content:center}
+  .modal .row .btn{flex:1;justify-content:center;padding:12px}
   .warn{font-size:12px;color:var(--amber);background:rgba(255,180,92,.08);border:1px solid rgba(255,180,92,.25);
     border-radius:10px;padding:10px 12px;margin-top:16px;line-height:1.5}
-  .copy-hint{font-size:11px;color:var(--good);margin-top:6px;min-height:14px}
+  .err-hint{font-size:12px;color:var(--glow);margin-top:6px;min-height:14px}
+
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:19;opacity:0;pointer-events:none;transition:.25s}
+  .scrim.show{opacity:1;pointer-events:auto}
 
   ::-webkit-scrollbar{width:10px}
   ::-webkit-scrollbar-thumb{background:#2a2540;border-radius:5px}
   ::-webkit-scrollbar-thumb:hover{background:#38314f}
+
+  /* ============ MOBILE ============ */
   @media (max-width:760px){
-    main{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-    aside{max-height:38vh}
+    header{padding:10px 14px;gap:10px}
+    .logo{font-size:26px}
     .tagline{display:none}
+    .status{display:none}
+    #homeBtn{display:none}          /* brand tap handles home on mobile */
+    #menuBtn{display:flex}
+    .sesh{gap:6px}
+    .code-pill{font-size:15px;padding:4px 10px}
+    #copyBtn,#seshState{display:none}   /* keep header tight; copy still available in drawer state text */
+    .pickBtnTxt{display:none}
+    #pickBtn{padding:9px 12px}
+
+    main{display:block}
+    aside{position:fixed;top:0;left:0;bottom:0;width:min(84vw,340px);z-index:20;
+      transform:translateX(-100%);transition:transform .25s ease;border-right:1px solid #2a2540}
+    aside.open{transform:translateX(0)}
+    .stage{height:100%;padding:12px 12px 14px}
+    .screen{border-radius:12px}
+    .nowbar{padding:10px 2px 4px;gap:10px}
+    .np-title{font-size:14px}
+    .controls{gap:7px;justify-content:center}
+    .ctrl{width:52px;height:52px}         /* bigger touch targets */
+    .ctrl.play{width:62px;height:62px}
+    .time{min-width:44px;font-size:11px}
+    .seek{order:10;flex-basis:100%;min-width:100%;margin-top:6px;height:8px}  /* full-width scrubber below buttons */
+    .vol{display:none}                     /* phones use hardware volume */
+    .nowbar .lbl{display:none}
+    .chat.open{height:min(50%,360px)}
+    .modal{padding:26px 22px}
+  }
+  @media (max-width:760px) and (display-mode:standalone){
+    header{padding-top:max(10px,env(safe-area-inset-top))}
   }
 </style>
 </head>
 <body>
 <header>
+  <button class="icon-btn" id="menuBtn" title="Library">
+    <svg viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+  </button>
   <div class="brand" id="brand" title="Back to menu">
     <div class="bulbs"><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div></div>
     <div>
@@ -156,17 +224,19 @@
       <div class="tagline">your videos, watched together</div>
     </div>
   </div>
-  <button class="home-btn" id="homeBtn" title="Back to menu">
+  <button class="icon-btn" id="homeBtn" title="Back to menu">
     <svg viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-4v-6h-4v6H6v-9H3z"/></svg>
   </button>
   <div class="spacer"></div>
   <div class="sesh" id="seshBar"></div>
   <div class="status"><span class="dot" id="dot"></span><span id="statusText">no videos loaded</span></div>
-  <button class="btn primary" id="pickBtn">Add videos</button>
+  <button class="btn primary" id="pickBtn"><span class="pickBtnTxt">Add videos</span><span aria-hidden="true">＋</span></button>
 </header>
 
+<div class="scrim" id="scrim"></div>
+
 <main>
-  <aside>
+  <aside id="drawer">
     <div class="side-head">
       <h2>Library</h2>
       <span class="count" id="libCount">empty</span>
@@ -174,6 +244,22 @@
     <div class="add-more hidden" id="addMore">+ Add more videos</div>
     <div class="shows" id="shows">
       <div class="empty-lib">No videos yet.<br>Hit <b>Add videos</b> to load some.</div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="chat" id="chat">
+      <div class="chat-head" id="chatHead">
+        <span class="ct">CHAT</span>
+        <span class="unread" id="unread">0</span>
+        <span class="toggle">▲</span>
+      </div>
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-input">
+        <input id="chatInput" placeholder="Message…" maxlength="500" autocomplete="off">
+        <button class="send" id="chatSend" title="Send">
+          <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
+      </div>
     </div>
   </aside>
 
@@ -226,50 +312,58 @@
   </section>
 </main>
 
-<!-- persistent hidden file input; universal multi-file selection -->
 <input type="file" id="fileInput" accept="video/*,.mkv,.mov" multiple style="display:none">
 
 <script>
 /* ============================================================
-   REEL ROOM v3
-   - Multi-file upload only (no directory picker -> works everywhere)
-   - Auto-grouping into shows by filename
-   - Home navigation (logo + home button)
-   - WebRTC watch-together (1 guest), both control playback
+   REEL ROOM v4
+   - Multi-file upload, auto-grouped shows
+   - Home nav, mobile drawer + touch layout
+   - WebRTC watch-together (1 guest): host owns timeline,
+     both share play/pause + episodes, guest sees read-only time
+   - Display names + P2P chat over the same data channel
    ============================================================ */
 const VIDEO_EXT=['mp4','webm','ogg','ogv','m4v','mov','mkv','avi'];
 const $=id=>document.getElementById(id);
 const video=$('video');
+const isMobile=()=>matchMedia('(max-width:760px)').matches;
 
-let library=[];                // [{name, episodes:[{name,label,file}]}]
+let library=[];
 let curShow=-1, curEp=-1, objectUrl=null;
-let role=null;                 // 'host' | 'guest' | null
+let role=null;
 let peer=null, conn=null, mediaCall=null, localStream=null;
 let applyingRemote=false, _code='', pendingHost=false;
+let myName='Host', peerName='Guest';
 
-/* ---------------- FILE INPUT (universal) ---------------- */
+/* ---------------- FILE INPUT ---------------- */
 $('pickBtn').addEventListener('click',()=>{ pendingHost=false; $('fileInput').click(); });
-$('hostBtn').addEventListener('click',()=>{ pendingHost=true; $('fileInput').click(); });
-$('joinBtn').addEventListener('click',openJoinModal);
+$('hostBtn').addEventListener('click',()=>{ askName('host'); });   // name first, then files
+$('joinBtn').addEventListener('click',()=>openJoinModal());
 $('addMore').addEventListener('click',()=>{ pendingHost=false; $('fileInput').click(); });
 $('fileInput').addEventListener('change',e=>{
   const files=[...e.target.files].filter(f=>isVideo(f.name));
-  e.target.value='';                       // allow re-picking same files later
-  if(!files.length){ if(pendingHost) alert('No video files selected.'); return; }
+  e.target.value='';
+  if(!files.length){ if(pendingHost) alert('No video files selected.'); pendingHost=false; return; }
   addFiles(files);
   if(pendingHost){ pendingHost=false; startHosting(); }
 });
+
+/* ---------------- MOBILE DRAWER ---------------- */
+$('menuBtn').addEventListener('click',openDrawer);
+$('scrim').addEventListener('click',closeDrawer);
+function openDrawer(){ $('drawer').classList.add('open'); $('scrim').classList.add('show'); }
+function closeDrawer(){ $('drawer').classList.remove('open'); $('scrim').classList.remove('show'); }
 
 /* ---------------- HOME NAVIGATION ---------------- */
 $('brand').addEventListener('click',goHome);
 $('homeBtn').addEventListener('click',goHome);
 function goHome(){
-  // return to the Watch Together menu without dropping the library or session
   video.pause();
   $('placeholder').style.display='block';
   video.style.display='none';
   $('nowbar').style.display='none';
   $('controls').style.display='none';
+  closeDrawer();
 }
 
 /* ---------------- FILENAME PARSER ---------------- */
@@ -292,31 +386,27 @@ function titleCase(s){
 const isVideo=n=>VIDEO_EXT.includes(n.split('.').pop().toLowerCase());
 const stripExt=n=>n.replace(/\.[^.]+$/,'');
 
-/* ---------------- BUILD / MERGE LIBRARY ---------------- */
+/* ---------------- LIBRARY ---------------- */
 function addFiles(files){
   files.forEach(file=>{
     const p=parseName(file.name);
-    const label = p.ep!=null ? (p.season>1?`S${p.season} · E${p.ep}`:`Ep ${p.ep}`) : null;
+    const label=p.ep!=null?(p.season>1?`S${p.season} · E${p.ep}`:`Ep ${p.ep}`):null;
     let show=library.find(s=>s.name===p.show);
     if(!show){ show={name:p.show,episodes:[]}; library.push(show); }
-    // avoid dupes by filename
     if(show.episodes.some(e=>e.file.name===file.name && e.file.size===file.size)) return;
-    show.episodes.push({ name:stripExt(file.name), label, season:p.season, ep:p.ep, file });
+    show.episodes.push({name:stripExt(file.name),label,season:p.season,ep:p.ep,file});
   });
-  // sort episodes within each show, then shows alphabetically (Other last)
   library.forEach(s=>s.episodes.sort((a,b)=>{
     if(a.ep!=null && b.ep!=null) return (a.season-b.season)||(a.ep-b.ep);
     return a.name.localeCompare(b.name,undefined,{numeric:true});
   }));
-  library.sort((a,b)=>{
-    if(a.name==='Other')return 1; if(b.name==='Other')return -1;
-    return a.name.localeCompare(b.name);
-  });
+  library.sort((a,b)=>{ if(a.name==='Other')return 1; if(b.name==='Other')return -1;
+    return a.name.localeCompare(b.name); });
   finishLoad();
 }
 function finishLoad(){
   const total=library.reduce((n,s)=>n+s.episodes.length,0);
-  if(!total){ return; }
+  if(!total) return;
   $('statusText').textContent=`${total} video${total>1?'s':''} ready`;
   if(!$('dot').classList.contains('live')) $('dot').className='dot on';
   $('libCount').textContent=`${library.length} show${library.length>1?'s':''}`;
@@ -332,14 +422,14 @@ function renderShows(){
     const head=document.createElement('div');head.className='show-title';
     head.innerHTML=`<span class="marker"></span>${esc(show.name)}
       <span class="n">${show.episodes.length} ep</span><span class="chev">▼</span>`;
-    head.onclick=(ev)=>{ if(ev.target.closest('.chev')||true){ el.classList.toggle('collapsed'); } };
+    head.onclick=()=>el.classList.toggle('collapsed');
     const wrap=document.createElement('div');wrap.className='eps';
     show.episodes.forEach((ep,ei)=>{
       const row=document.createElement('div');
       row.className='ep'+(si===curShow&&ei===curEp?' playing':'');
       const idx=ep.ep!=null?String(ep.ep).padStart(2,'0'):String(ei+1).padStart(2,'0');
-      row.innerHTML=`<span class="idx">${idx}</span><span class="nm">${esc(ep.label?ep.name:ep.name)}</span>`;
-      row.onclick=(e)=>{ e.stopPropagation(); play(si,ei); };
+      row.innerHTML=`<span class="idx">${idx}</span><span class="nm">${esc(ep.name)}</span>`;
+      row.onclick=(e)=>{ e.stopPropagation(); play(si,ei); if(isMobile())closeDrawer(); };
       wrap.appendChild(row);
     });
     el.appendChild(head);el.appendChild(wrap);box.appendChild(el);
@@ -347,23 +437,20 @@ function renderShows(){
 }
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-/* ---------------- PLAYBACK (host) ---------------- */
+/* ---------------- PLAYBACK ---------------- */
 async function play(si,ei){
   const ep=library[si]?.episodes[ei];if(!ep)return;
   curShow=si;curEp=ei;
   if(objectUrl)URL.revokeObjectURL(objectUrl);
   objectUrl=URL.createObjectURL(ep.file);
-  video.srcObject=null;
-  video.src=objectUrl;
+  video.srcObject=null; video.src=objectUrl;
   await video.play().catch(()=>{});
   showPlayer();
   $('npTitle').textContent=library[si].name;
   $('npSub').textContent=(ep.label?ep.label+' · ':'')+ep.name;
   renderShows();
-  if(role==='host'){
-    pipeStreamToGuest();
-    send({t:'load',title:library[si].name,sub:(ep.label?ep.label+' · ':'')+ep.name});
-  }
+  if(role==='host'){ pipeStreamToGuest();
+    send({t:'load',title:library[si].name,sub:(ep.label?ep.label+' · ':'')+ep.name}); }
 }
 function showPlayer(){
   $('placeholder').style.display='none';video.style.display='block';
@@ -382,20 +469,11 @@ function prevEp(){
   else{let ps=curShow-1;while(ps>=0&&!library[ps].episodes.length)ps--;
     if(ps>=0)play(ps,library[ps].episodes.length-1);}
 }
-/* ---- command model ----
-   PLAY/PAUSE: either side may trigger. The command routes to the HOST's real
-     video (the single stream source), so pausing the source pauses it for both
-     with no drift. Guest just sends a request; host's video obeys and the
-     stream reflects it.
-   SEEK: host-only. Host seeking re-flows the live stream from the new spot;
-     we flag the guest to show a brief "syncing" spinner during the rebuffer.  */
 function togglePlay(){
   if(role==='guest'){
-    const want = video.paused?'play':'pause';
-    send({t:'ctl',cmd:want});               // ask host to drive the real playhead
-    applyingRemote=true;                      // reflect locally right away (snappy); host echo confirms
-    if(want==='play') video.play().catch(()=>{}); else video.pause();
-    applyingRemote=false;
+    const want=video.paused?'play':'pause';
+    send({t:'ctl',cmd:want});
+    applyingRemote=true; if(want==='play')video.play().catch(()=>{});else video.pause(); applyingRemote=false;
     return;
   }
   video.paused?doPlay():doPause();
@@ -403,12 +481,9 @@ function togglePlay(){
 function doPlay(){ video.play().catch(()=>{}); if(!applyingRemote)send({t:'play'}); }
 function doPause(){ video.pause(); if(!applyingRemote)send({t:'pause'}); }
 function seekTo(s){
-  if(role==='guest') return;               // guests cannot seek (no timeline on a live stream)
-  send({t:'buffering'});                    // tell guest to show spinner
-  video.currentTime=s;
-  send({t:'seek'});                          // host position changed; stream will re-flow
+  if(role==='guest')return;
+  send({t:'buffering'}); video.currentTime=s; send({t:'seek'});
 }
-
 $('playBtn').onclick=togglePlay;
 $('nextBtn').onclick=()=>{ if(role==='guest'){send({t:'next'});}else nextEp(); };
 $('prevBtn').onclick=()=>{ if(role==='guest'){send({t:'prev'});}else prevEp(); };
@@ -421,13 +496,11 @@ $('vol').oninput=e=>video.volume=e.target.value;
 video.addEventListener('play',()=>{$('playIcon').classList.add('hidden');$('pauseIcon').classList.remove('hidden');});
 video.addEventListener('pause',()=>{$('pauseIcon').classList.add('hidden');$('playIcon').classList.remove('hidden');});
 video.addEventListener('ended',()=>{ if(role!=='guest') nextEp(); });
-// host: once our own seek settles, nudge the guest to resync + clear its spinner
 video.addEventListener('seeked',()=>{ if(role==='host'){ send({t:'seek'}); send({t: video.paused?'pause':'play'}); } });
 video.addEventListener('loadedmetadata',()=>{$('dur').textContent=fmt(video.duration);$('seek').max=video.duration||100;});
 video.addEventListener('timeupdate',()=>{
   $('cur').textContent=fmt(video.currentTime);
   if(!seeking)$('seek').value=video.currentTime;
-  // host streams its clock to the guest (guest's own stream has no timeline)
   if(role==='host') send({t:'time',cur:video.currentTime,dur:video.duration});
 });
 let seeking=false;
@@ -449,6 +522,36 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ============================================================
+   CHAT  (over the P2P data channel)
+   ============================================================ */
+let unreadCount=0;
+$('chatHead').addEventListener('click',()=>{
+  $('chat').classList.toggle('open');
+  if($('chat').classList.contains('open')){ unreadCount=0; updateUnread(); $('chatInput').focus(); scrollChat(); }
+});
+$('chatSend').addEventListener('click',sendChat);
+$('chatInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();sendChat();} });
+function sendChat(){
+  const text=$('chatInput').value.trim(); if(!text)return;
+  if(!conn||!conn.open){ addMsg('sys',null,'Not connected — start or join a session to chat.'); $('chatInput').value=''; return; }
+  $('chatInput').value='';
+  addMsg('me',myName,text);
+  send({t:'chat',name:myName,text});
+}
+function addMsg(kind,who,text){
+  const el=document.createElement('div'); el.className='msg '+kind;
+  if(kind==='sys'){ el.textContent=text; }
+  else{ el.innerHTML=`<div class="who">${esc(who||'')}</div>${esc(text)}`; }
+  $('chatLog').appendChild(el);
+  scrollChat();
+  if(kind==='them' && !$('chat').classList.contains('open')){ unreadCount++; updateUnread(); }
+}
+function scrollChat(){ const l=$('chatLog'); l.scrollTop=l.scrollHeight; }
+function updateUnread(){ const u=$('unread'); u.textContent=unreadCount;
+  u.classList.toggle('show',unreadCount>0); }
+function openChat(){ if(!$('chat').classList.contains('open')) $('chatHead').click(); }
+
+/* ============================================================
    WEBRTC — PeerJS
    ============================================================ */
 const CODE_CHARS='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -457,8 +560,53 @@ const PREFIX='reelroom-';
 const currentCode=()=>_code;
 function send(msg){ if(conn&&conn.open){ try{conn.send(msg);}catch(e){} } }
 
+/* name prompt shared by host + join */
+function askName(mode){
+  const o=document.createElement('div');o.className='overlay';
+  const isHost=mode==='host';
+  o.innerHTML=`<div class="modal">
+    <h3>${isHost?'START A':'JOIN A'} <span>SESSION</span></h3>
+    <p>${isHost?'Pick a display name — your friend will see it in chat. Next you’ll choose your videos.'
+              :'Pick a display name, then enter the code your host sent you.'}</p>
+    <div class="field"><input id="nameInput" maxlength="24" placeholder="Your name" autocomplete="off"></div>
+    ${isHost?'':'<div class="field code"><input id="codeInput" maxlength="5" placeholder="Room code (e.g. K4M7Q)" autocomplete="off"></div>'}
+    <div class="err-hint" id="errHint"></div>
+    <div class="row">
+      <button class="btn ghost" id="cancelBtn">Cancel</button>
+      <button class="btn primary" id="goBtn">${isHost?'Choose videos →':'Connect'}</button>
+    </div>
+    ${isHost?'':'<div class="warn">If it won’t connect, you and the host are probably on networks that block direct links. Home Wi-Fi almost always works.</div>'}
+  </div>`;
+  document.body.appendChild(o);
+  const nameInp=$('nameInput'); nameInp.focus();
+  const codeInp=$('codeInput');
+  if(codeInp){ codeInp.addEventListener('input',()=>codeInp.value=codeInp.value.toUpperCase().replace(/[^A-Z0-9]/g,'')); }
+  const submit=()=>{
+    const name=nameInp.value.trim();
+    if(!name){ hint('Enter a display name.'); nameInp.focus(); return; }
+    myName=name;
+    if(isHost){ closeModal(); pendingHost=true; $('fileInput').click(); }
+    else{
+      const code=(codeInp.value||'').trim();
+      if(code.length<5){ hint('Room codes are 5 characters.'); codeInp.focus(); return; }
+      $('goBtn').disabled=true; $('goBtn').textContent='Connecting…';
+      joinSession(code);
+    }
+  };
+  $('goBtn').onclick=submit;
+  nameInp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ if(codeInp) codeInp.focus(); else submit(); } });
+  if(codeInp) codeInp.addEventListener('keydown',e=>{ if(e.key==='Enter')submit(); });
+  $('cancelBtn').onclick=closeModal;
+}
+function openJoinModal(){ askName('join'); }
+function hint(t){ const e=$('errHint'); if(e)e.textContent=t;
+  const g=$('goBtn'); if(g){g.disabled=false; g.textContent=g.textContent.includes('Connect')?'Connect':g.textContent;} }
+function modalError(t){ const e=$('errHint'); if(e)e.textContent=t;
+  const g=$('goBtn'); if(g){g.disabled=false; g.textContent='Connect';} }
+function closeModal(){ const o=document.querySelector('.overlay'); if(o)o.remove(); }
+
 function startHosting(){
-  if(peer && role==='host'){ return; }   // already hosting
+  if(peer && role==='host') return;
   role='host';
   const code=genCode();
   peer=new Peer(PREFIX+code,{debug:1});
@@ -467,6 +615,7 @@ function startHosting(){
   peer.on('connection',c=>{
     conn=c;
     conn.on('open',()=>{
+      send({t:'hello',name:myName});          // exchange names
       renderSeshBar('host',code,'guest connected');
       $('dot').className='dot live';$('statusText').textContent='live · 1 guest';
       if(curShow>=0){
@@ -476,7 +625,7 @@ function startHosting(){
         send({t: video.paused?'pause':'play'});
       }
     });
-    conn.on('data',onHostData);
+    conn.on('data',onData);
     conn.on('close',guestGone);
   });
   peer.on('error',onPeerError);
@@ -488,20 +637,8 @@ function pipeStreamToGuest(){
   if(mediaCall){ try{mediaCall.close();}catch(e){} }
   mediaCall=peer.call(conn.peer,localStream);
 }
-function onHostData(msg){
-  // messages FROM the guest. Guest may drive play/pause + episode skips only.
-  applyingRemote=true;
-  switch(msg.t){
-    case 'ctl':                              // guest play/pause request -> drive host video
-      if(msg.cmd==='play') video.play().catch(()=>{});
-      else if(msg.cmd==='pause') video.pause();
-      break;
-    case 'next': nextEp(); break;
-    case 'prev': prevEp(); break;
-  }
-  applyingRemote=false;
-}
 function guestGone(){
+  addMsg('sys',null,`${peerName} left`);
   renderSeshBar('host',currentCode(),'guest left');
   $('dot').className='dot on';$('statusText').textContent='hosting · waiting';
 }
@@ -511,13 +648,14 @@ function joinSession(code){
   peer.on('open',()=>{
     conn=peer.connect(PREFIX+code,{reliable:true});
     conn.on('open',()=>{
+      send({t:'hello',name:myName});
       closeModal();
       renderSeshBar('guest',code,'connected');
       $('dot').className='dot live';$('statusText').textContent='watching · connected';
       switchToGuestUI();
     });
-    conn.on('data',onGuestData);
-    conn.on('close',()=>{ $('dot').className='dot';$('statusText').textContent='host disconnected'; });
+    conn.on('data',onData);
+    conn.on('close',()=>{ addMsg('sys',null,'Host disconnected'); $('dot').className='dot';$('statusText').textContent='host disconnected'; });
     setTimeout(()=>{ if(!conn||!conn.open) modalError('Could not reach that session. Check the code, or the host may be behind a strict network.'); },9000);
   });
   peer.on('call',call=>{
@@ -529,28 +667,34 @@ function joinSession(code){
     else onPeerError(err);
   });
 }
-function onGuestData(msg){
-  // messages FROM the host. Guest mirrors host state; cannot seek its own stream.
+
+/* unified data handler; branch by role for playback, shared for chat/hello */
+function onData(msg){
+  // shared messages
+  if(msg.t==='hello'){ peerName=msg.name||'Friend'; addMsg('sys',null,`${peerName} joined`); return; }
+  if(msg.t==='chat'){ addMsg('them',msg.name||peerName,msg.text||''); return; }
+  if(role==='host') onHostData(msg); else onGuestData(msg);
+}
+function onHostData(msg){
+  applyingRemote=true;
   switch(msg.t){
-    case 'load':
-      $('npTitle').textContent=msg.title||'Now playing';
-      $('npSub').textContent=msg.sub||'';
-      showPlayer(); hideSpinner(); break;
-    case 'play':  applyingRemote=true; video.play().catch(()=>{}); applyingRemote=false; hideSpinner(); break;
+    case 'ctl': if(msg.cmd==='play')video.play().catch(()=>{}); else if(msg.cmd==='pause')video.pause(); break;
+    case 'next': nextEp(); break;
+    case 'prev': prevEp(); break;
+  }
+  applyingRemote=false;
+}
+function onGuestData(msg){
+  switch(msg.t){
+    case 'load': $('npTitle').textContent=msg.title||'Now playing'; $('npSub').textContent=msg.sub||''; showPlayer(); hideSpinner(); break;
+    case 'play': applyingRemote=true; video.play().catch(()=>{}); applyingRemote=false; hideSpinner(); break;
     case 'pause': applyingRemote=true; video.pause(); applyingRemote=false; break;
-    case 'buffering': showSpinner('Syncing…'); break;   // host is seeking; hold
-    case 'seek':
-      // host jumped; the live stream re-flows on its own. Clear spinner once frames resume.
-      waitForResume(); break;
-    case 'time':
-      // host's clock -> render read-only for the guest
-      $('cur').textContent=fmt(msg.cur);
-      if(isFinite(msg.dur)){ $('dur').textContent=fmt(msg.dur);
-        $('seek').max=msg.dur; $('seek').value=msg.cur; }
-      break;
+    case 'buffering': showSpinner('Syncing…'); break;
+    case 'seek': waitForResume(); break;
+    case 'time': $('cur').textContent=fmt(msg.cur);
+      if(isFinite(msg.dur)){ $('dur').textContent=fmt(msg.dur); $('seek').max=msg.dur; $('seek').value=msg.cur; } break;
   }
 }
-/* guest spinner overlay for the brief rebuffer after a host seek */
 function showSpinner(text){
   let s=$('spinner');
   if(!s){
@@ -560,32 +704,28 @@ function showSpinner(text){
       'color:#f0ecff;font-family:var(--body);font-size:14px;letter-spacing:.5px';
     s.innerHTML='<div style="width:44px;height:44px;border:3px solid rgba(255,92,122,.25);'+
       'border-top-color:#ff5c7a;border-radius:50%;animation:spin .8s linear infinite"></div>'+
-      '<div id="spinTxt"></div>'+
-      '<style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+      '<div id="spinTxt"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
     document.querySelector('.screen').appendChild(s);
   }
   s.style.display='flex'; $('spinTxt').textContent=text||'Syncing…';
 }
 function hideSpinner(){ const s=$('spinner'); if(s)s.style.display='none'; }
 function waitForResume(){
-  // when the stream starts delivering frames again, drop the spinner
   let done=false;
-  const clear=()=>{ if(done)return; done=true; hideSpinner();
-    video.removeEventListener('timeupdate',clear); };
+  const clear=()=>{ if(done)return; done=true; hideSpinner(); video.removeEventListener('timeupdate',clear); };
   video.addEventListener('timeupdate',clear);
-  setTimeout(clear,4000);   // safety: never spin forever
+  setTimeout(clear,4000);
 }
 function switchToGuestUI(){
   $('shows').innerHTML=`<div class="guest-note">You're a <b>guest</b>.<br><br>
     You can <b>play, pause</b> and <b>skip episodes</b> — those sync for both of you.<br><br>
-    The <b>host controls the timeline</b> (rewind / fast-forward). You'll see the time move, but only the host can scrub it.<br><br>
+    The <b>host controls the timeline</b>. You'll see the time move, but only the host can scrub it.<br><br>
     Volume is yours alone.</div>`;
   $('libCount').textContent='guest';
   $('addMore').classList.add('hidden');
   $('pickBtn').classList.add('hidden');
-  // guest SEES the time + progress, but can't drive it
-  $('seek').disabled=true;              // read-only progress bar (mirrors host)
-  $('back10').style.display='none';     // host-only controls
+  $('seek').disabled=true;
+  $('back10').style.display='none';
   $('fwd10').style.display='none';
 }
 function onPeerError(err){
@@ -624,34 +764,6 @@ function renderSeshBar(r,code,state){
   }
   $('endBtn').onclick=endSession;
 }
-function openJoinModal(){
-  const o=document.createElement('div');o.className='overlay';
-  o.innerHTML=`<div class="modal">
-    <h3>JOIN A <span>SESSION</span></h3>
-    <p>Paste the 5-character code your host sent you. You don't need any video files — the stream comes from them.</p>
-    <div class="field"><input id="codeInput" maxlength="5" placeholder="e.g. K4M7Q" autocomplete="off"></div>
-    <div class="copy-hint" id="joinErr"></div>
-    <div class="row">
-      <button class="btn ghost" id="cancelJoin">Cancel</button>
-      <button class="btn primary" id="goJoin">Connect</button>
-    </div>
-    <div class="warn">If it won't connect, you and the host are probably on networks that block direct links. Home Wi-Fi almost always works.</div>
-  </div>`;
-  document.body.appendChild(o);
-  const inp=$('codeInput');inp.focus();
-  inp.addEventListener('input',()=>inp.value=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,''));
-  inp.addEventListener('keydown',e=>{if(e.key==='Enter')$('goJoin').click();});
-  $('cancelJoin').onclick=closeModal;
-  $('goJoin').onclick=()=>{
-    const code=inp.value.trim();
-    if(code.length<5){modalError('Codes are 5 characters.');return;}
-    $('goJoin').disabled=true;$('goJoin').textContent='Connecting…';
-    joinSession(code);
-  };
-}
-function modalError(t){ const e=$('joinErr'); if(e){e.style.color='var(--glow)';e.textContent=t;}
-  const g=$('goJoin'); if(g){g.disabled=false;g.textContent='Connect';} }
-function closeModal(){ const o=document.querySelector('.overlay'); if(o)o.remove(); }
 </script>
 </body>
 </html>
